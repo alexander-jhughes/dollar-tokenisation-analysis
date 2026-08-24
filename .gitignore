@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+.ipynb_checkpoints/
+node_modules/
+artifacts/
+cache/
+.env
+data/raw/*.csv
+!data/raw/.gitkeep

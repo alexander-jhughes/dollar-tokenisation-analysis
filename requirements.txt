@@ -1,0 +1,8 @@
+pandas
+numpy
+matplotlib
+statsmodels
+requests
+jupyter
+ipywidgets
+tensorflow   # only needed for the optional notebooks/04_deep_learning_comparison.ipynb
