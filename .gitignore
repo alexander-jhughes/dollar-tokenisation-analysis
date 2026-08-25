@@ -7,3 +7,7 @@ cache/
 .env
 data/raw/*.csv
 !data/raw/.gitkeep
+.DS_Store
+.RData
+.Rhistory
+.ipynb_checkpoints/
