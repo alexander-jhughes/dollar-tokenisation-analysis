@@ -1,6 +1,6 @@
-# Oil Trade Settlement: a Delivery-versus-Payment Demo
+# Oil Trade Settlement Demo
 
-A minimal, atomic delivery-versus-payment (DvP) escrow contract demonstrating tokenised settlement for a cross-border oil trade, built as part of the [Same Rails, New Owner?](../README.md) analysis.
+A minimal, atomic delivery-versus-payment (DvP) escrow smart contract demonstrating a tokenised settlement transaction for a cross-border oil trade.
 
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.28-363636.svg)](https://soliditylang.org/)
 [![Hardhat](https://img.shields.io/badge/Hardhat-3-yellow.svg)](https://hardhat.org/)
@@ -18,49 +18,46 @@ A minimal, atomic delivery-versus-payment (DvP) escrow contract demonstrating to
 - [Settlement Cost](#settlement-cost)
 - [Testing](#testing)
 - [Limitations](#limitations)
-- [Scope](#scope)
 
 ## What This Demonstrates
 
-A buyer and seller each deposit their leg of a trade into an escrow contract. Settlement is atomic: neither leg is released until both have been deposited and both parties pass a compliance allowlist check. If only one party deposits and the other never arrives, the depositor can reclaim their funds after a fixed deadline.
+A buyer and seller each deposit their leg of a trade into an escrow contract. Settlement is atomic: neither leg is released until both have been deposited and both parties pass a pre-determined compliance allowlist check. If only one party deposits and the other never arrives, the depositor can reclaim their funds after a fixed deadline.
 
-This mirrors real 2026 institutional DvP pilots (Partior/OpenAssets, the UK's GBTD, Hong Kong's EnsembleTX), which increasingly favour tokenised deposits over public stablecoins as the cash leg. The contract uses a mock ERC-20 for public-testnet demonstrability, but the settlement logic is cash-leg-agnostic: it would function identically with a tokenised deposit or a stablecoin.
+This mirrors 2026 institutional DvP pilots (the UK's GBTD, Hong Kong's EnsembleTX, BIS Project Agorá), which increasingly favour tokenised deposits over public stablecoins as the cash leg. The contract uses a mock ERC-20 for public-testnet demonstrability.
 
 ## How the Settlement Works
 
-The contract represents a simplified cross-border oil trade: a buyer holds a cash-leg token (`MockUSDC`, standing in for a dollar-equivalent settlement asset) and a seller holds an oil-leg token (`ExampleOilToken`, standing in for a tokenised claim on a physical oil shipment). Real-world tokenised commodity trades typically represent ownership of a specific, verified quantity of the underlying asset, held or audited by a custodian; this contract does not implement that custody layer, it demonstrates the settlement mechanics that would sit on top of one.
+The contract represents a simplified cross-border oil trade: a buyer holds a cash-leg token (`MockUSDC`, standing in for a dollar-equivalent settlement asset) and a seller holds an oil-leg token (`ExampleOilToken`, standing in for a tokenised claim on a physical oil shipment). Real-world tokenised commodity trades typically represent ownership of a specific, verified quantity of the underlying asset, held or audited by a custodian; this contract does not implement that custody layer, it is intended solely to illustrate the settlement mechanics underlying such a system.
 
 ```mermaid
-sequenceDiagram
-    participant B as Buyer
-    participant S as Seller
-    participant C as OilTradeSettlement
+flowchart LR
+    A["Buyer wallet<br/>1000 mUSDC"] --> C(("Escrow<br/>contract"))
+    B["Seller wallet<br/>500 OIL"] --> C
+    C --> D["Seller receives<br/>1000 mUSDC"]
+    C --> E["Buyer receives<br/>500 OIL"]
+    B -.->|"claim on, not<br/>custody of"| F["Custodian /<br/>bill of lading"]
+    F --> G["Physical oil<br/>shipment"]
 
-    B->>C: deposit() — 1000 mUSDC
-    S->>C: deposit() — 500 OIL
-    Note over C: Both legs held in escrow
-
-    alt Both legs deposited
-        B->>C: settle()
-        C->>S: transfer 1000 mUSDC
-        C->>B: transfer 500 OIL
-    else Deadline passes, one leg missing
-        B->>C: refund()
-        C->>B: return deposited leg
-    end
+    style A fill:#2c5aa0,stroke:#0d1f2d,color:#ffffff,stroke-width:0.5px
+    style B fill:#2c5aa0,stroke:#0d1f2d,color:#ffffff,stroke-width:0.5px
+    style C fill:#0d1f2d,stroke:#e8f0f5,color:#ffffff,stroke-width:1px
+    style D fill:#2c5aa0,stroke:#0d1f2d,color:#ffffff,stroke-width:0.5px
+    style E fill:#2c5aa0,stroke:#0d1f2d,color:#ffffff,stroke-width:0.5px
+    style F fill:#1a3a52,stroke:#c98a3e,color:#ffffff,stroke-width:0.5px
+    style G fill:#1a3a52,stroke:#c98a3e,color:#ffffff,stroke-width:0.5px
 ```
 
-Both legs are deposited into escrow, and the atomic swap only executes once both are present and both parties pass the compliance allowlist, ensuring the buyer cannot pay without receiving the oil-leg token, and the seller cannot deliver without receiving payment.
+Both legs are deposited into escrow, and the atomic swap only executes once both are present and both parties pass the compliance allowlist. This ensures a buyer cannot pay without receiving the oil-leg token, and a seller cannot deliver without receiving payment.
 
 ## Contracts
 
-- `MockUSDC.sol` — mintable ERC-20 standing in for the cash leg (6 decimals, matching real USDC convention)
-- `ExampleOilToken.sol` — mintable ERC-20 standing in for the tokenised commodity leg (18 decimals)
-- `OilTradeSettlement.sol` — the DvP escrow contract: deposit, atomic settle, and timeout/refund logic, gated by a compliance allowlist
+- `MockUSDC.sol`: mintable ERC-20 standing in for the cash leg (6 decimals, matching real USDC convention)
+- `ExampleOilToken.sol`: mintable ERC-20 standing in for the tokenised commodity leg (18 decimals)
+- `OilTradeSettlement.sol`: the DvP escrow contract: deposit, atomic settle, and timeout/refund logic, gated by a compliance allowlist
 
 ## Run It Yourself
 
-Deploy your own instance and watch a real settlement execute, with your own transaction hash and gas cost printed to your terminal.
+Deploy your own contract instance and watch a real settlement execute, with your own transaction hash and gas cost printed to your terminal.
 
 ```bash
 cd contracts
@@ -87,7 +84,7 @@ npx tsx scripts/deploy.ts   # copy the three printed addresses into .env
 npx tsx scripts/run-trade.ts
 ```
 
-Output shows minting, approvals, both deposits, and the atomic settlement, ending in a real transaction hash and gas cost. `.env` is git-ignored by default; never commit it.
+Output shows minting, approvals, both deposits, and the atomic settlement, ending in a real transaction hash and gas cost.
 
 ## Live on Sepolia
 
@@ -124,8 +121,4 @@ npx hardhat test
 
 ## Limitations
 
-Gas cost figures are drawn from Sepolia testnet, which does not always mirror mainnet gas market pricing exactly, but is representative of the order of magnitude for this kind of settlement transaction. This contract also does not implement a custody or asset-verification layer for the oil leg; it demonstrates settlement mechanics, not proof of underlying commodity ownership.
-
-## Scope
-
-Deliberately excluded, per the project's core scoping principle of a clean, defensible core over feature breadth: Foundry fuzz testing, a frontend, CI-integrated static analysis (Slither), multi-asset DvP variants, and live price feeds. The CLI scripts above provide the "clone and run it yourself" verification path without the added surface area of a UI.
+Gas cost figures are drawn from Sepolia testnet, which does not always mirror mainnet gas market pricing exactly, though it is representative of the order of magnitude for this kind of settlement transaction.
